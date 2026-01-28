@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-	"payment/internal/adapters/postgres"
 	"payment/internal/adapters/rabbitmq"
-	"payment/internal/application"
+	"payment/internal/repository"
 	"payment/internal/pkg"
 	"payment/internal/pkg/messaging"
+	"payment/internal/service"
 
 	"github.com/google/uuid"
 
@@ -96,13 +96,13 @@ func main() {
 	log.Printf("Successfully bound queue")
 
 	// Initialize adapters
-	paymentRepo := postgres.NewPaymentRepository(dbpool)
+	paymentRepo := repository.NewPaymentRepository(dbpool)
 
 	// Use the real RabbitMQ notifier
 	paymentNotifier := rabbitmq.NewPaymentNotifier(amqpChannel, exchangeName)
 
 	// Initialize application services
-	paymentService := application.NewPaymentService(paymentRepo, paymentNotifier)
+	paymentService := payment.NewPaymentService(paymentRepo, paymentNotifier)
 
 	// 4. Start Consuming
 	log.Println("Starting consumer...")
@@ -160,7 +160,7 @@ func main() {
 
 				err = paymentService.ProcessPayment(context.Background(), paymentID)
 				if err != nil {
-					if err == application.ErrPaymentNotPending {
+					if err == payment.ErrPaymentNotPending {
 						log.Printf("Payment %s already processed or not pending. Acking.", paymentID.String())
 						d.Ack(false)
 					} else {

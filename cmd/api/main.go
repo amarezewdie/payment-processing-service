@@ -3,18 +3,20 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/joho/godotenv"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 	"github.com/streadway/amqp"
 
-	paymenthttp "payment/internal/adapters/http"
-	"payment/internal/adapters/postgres"
 	"payment/internal/adapters/rabbitmq"
-	"payment/internal/application"
+	handler "payment/internal/handler"
+	"payment/internal/pkg"
+	repository "payment/internal/repository"
+	service "payment/internal/service"
 )
 
 func main() {
@@ -23,28 +25,29 @@ func main() {
 		log.Println("No .env file found, assuming environment variables are set.")
 	}
 
-	e := echo.New()
+	r := chi.NewRouter()
 
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.Recoverer)
 
 	// Database connection
-	dbpool, err := pgxpool.ConnectConfig(context.Background(), newDBConfig(os.Getenv("DATABASE_URL")))
+	dbpool, err := pgxpool.ConnectConfig(context.Background(), pkg.NewDBConfig(os.Getenv("DATABASE_URL")))
 	if err != nil {
-		e.Logger.Fatal("Failed to connect to database: ", err)
+		log.Fatal("Failed to connect to database: ", err)
 	}
 	defer dbpool.Close()
 
 	// RabbitMQ connection
 	amqpConn, err := amqp.Dial(os.Getenv("RABBITMQ_URL"))
 	if err != nil {
-		e.Logger.Fatal("Failed to connect to RabbitMQ: ", err)
+		log.Fatal("Failed to connect to RabbitMQ: ", err)
 	}
 	defer amqpConn.Close()
 
 	amqpChannel, err := amqpConn.Channel()
 	if err != nil {
-		e.Logger.Fatal("Failed to open RabbitMQ channel: ", err)
+		log.Fatal("Failed to open RabbitMQ channel: ", err)
 	}
 	defer amqpChannel.Close()
 
@@ -61,7 +64,7 @@ func main() {
 		nil,       // arguments
 	)
 	if err != nil {
-		e.Logger.Fatalf("Failed to declare a queue: %v", err)
+		log.Fatalf("Failed to declare a queue: %v", err)
 	}
 
 	// Bind the queue to the exchange
@@ -74,32 +77,23 @@ func main() {
 		nil,
 	)
 	if err != nil {
-		e.Logger.Fatalf("Failed to bind a queue: %v", err)
+		log.Fatalf("Failed to bind a queue: %v", err)
 	}
 
 	// Initialize adapters
-	paymentRepo := postgres.NewPaymentRepository(dbpool)
+	paymentRepo := repository.NewPaymentRepository(dbpool)
 	paymentNotifier := rabbitmq.NewPaymentNotifier(amqpChannel, exchangeName)
 
 	// Initialize application services
-	paymentService := application.NewPaymentService(paymentRepo, paymentNotifier)
+	paymentService := service.NewPaymentService(paymentRepo, paymentNotifier)
 
 	// Initialize HTTP handlers
-	paymentHandler := paymenthttp.NewPaymentHandler(paymentService)
-
-	e.Validator = paymentHandler.NewCustomValidator()
+	paymentHandler := handler.NewPaymentHandler(paymentService)
 
 	// Routes
-	e.POST("/payments", paymentHandler.CreatePayment)
-	e.GET("/payments/:id", paymentHandler.GetPayment)
+	r.Post("/payments", paymentHandler.CreatePayment)
+	r.Get("/payments/{id}", paymentHandler.GetPayment)
 
-	e.Logger.Fatal(e.Start(":8080"))
-}
-
-func newDBConfig(databaseURL string) *pgxpool.Config {
-	config, err := pgxpool.ParseConfig(databaseURL)
-	if err != nil {
-		log.Fatalf("Failed to parse database URL: %v", err)
-	}
-	return config
+	log.Printf("Server starting on port %s", os.Getenv("API_PORT"))
+	log.Fatal(http.ListenAndServe(":"+os.Getenv("API_PORT"), r))
 }

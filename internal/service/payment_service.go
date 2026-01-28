@@ -1,10 +1,11 @@
-package application
+package payment
 
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"payment/internal/domain"
+
+	"github.com/google/uuid"
 )
 
 // PaymentRepository defines the interface for interacting with payment data storage.
