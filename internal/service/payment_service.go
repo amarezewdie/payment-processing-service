@@ -1,19 +1,19 @@
-package payment
+package service
 
 import (
 	"context"
 
-	"payment/internal/domain"
+	"payment/internal/model"
 
 	"github.com/google/uuid"
 )
 
 // PaymentRepository defines the interface for interacting with payment data storage.
 type PaymentRepository interface {
-	Save(ctx context.Context, payment *domain.Payment) error
-	FindByID(ctx context.Context, id uuid.UUID) (*domain.Payment, error)
-	Update(ctx context.Context, payment *domain.Payment) error
-	UpdateStatusIfPending(ctx context.Context, id uuid.UUID, newStatus domain.PaymentStatus) (bool, error)
+	Save(ctx context.Context, payment *model.Payment) error
+	FindByID(ctx context.Context, id uuid.UUID) (*model.Payment, error)
+	Update(ctx context.Context, payment *model.Payment) error
+	UpdateStatusIfPending(ctx context.Context, id uuid.UUID, newStatus model.PaymentStatus) (bool, error)
 }
 
 // PaymentNotifier defines the interface for notifying about payment events.

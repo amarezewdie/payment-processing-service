@@ -1,4 +1,4 @@
-package domain
+package model
 
 import (
 	"time"
@@ -27,16 +27,13 @@ type Payment struct {
 	UpdatedAt time.Time     `json:"updated_at"`
 }
 
-// NewPayment creates a new payment with a pending status
+// NewPayment creates a new payment with a pending status.
 func NewPayment(reference string, amount float64, currency string) *Payment {
 	return &Payment{
-		ID:        uuid.New(),
 		Reference: reference,
 		Amount:    amount,
 		Currency:  currency,
 		Status:    PaymentStatusPending,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
 	}
 }
 

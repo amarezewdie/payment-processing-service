@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"payment/internal/model"
 	httpResponse "payment/internal/pkg/http"
-	service "payment/internal/service"
+	"payment/internal/service"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -81,7 +82,7 @@ func (h *PaymentHandler) GetPayment(w http.ResponseWriter, r *http.Request) {
 
 	payment, err := h.paymentService.GetPayment(r.Context(), paymentID)
 	if err != nil {
-		if err.Error() == "payment not found" {
+		if err.Error() == model.ErrPaymentNotFound.Error() {
 			httpResponse.HTTPError(w, http.StatusNotFound, "Payment not found")
 			return
 		}

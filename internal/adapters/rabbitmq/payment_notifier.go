@@ -19,18 +19,6 @@ type PaymentNotifier struct {
 
 // NewPaymentNotifier creates a new RabbitMQ PaymentNotifier.
 func NewPaymentNotifier(channel *amqp.Channel, exchangeName string) *PaymentNotifier {
-	err := channel.ExchangeDeclare(
-		exchangeName, // name
-		"topic",      // type
-		true,         // durable
-		false,        // auto-deleted
-		false,        // internal
-		false,        // no-wait
-		nil,          // arguments
-	)
-	if err != nil {
-		log.Fatalf("Failed to declare an exchange: %v", err)
-	}
 	return &PaymentNotifier{
 		channel:      channel,
 		exchangeName: exchangeName,
@@ -46,7 +34,7 @@ func (n *PaymentNotifier) NotifyPaymentCreated(ctx context.Context, paymentID uu
 
 	// Create the standardized event message (the "envelope")
 	event := messaging.NewEvent("payment.created", "payment-api", payload)
-	
+
 	body, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event message: %w", err)

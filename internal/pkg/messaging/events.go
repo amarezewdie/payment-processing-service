@@ -8,18 +8,10 @@ import (
 
 // EventMessage is a standardized structure for all asynchronous messages.
 type EventMessage struct {
-	// Type identifies the nature of the event, e.g., "payment.created".
-	// Consumers use this to know what the message is about.
-	Type string `json:"type"`
-
-	// Source identifies which service published the message, e.g., "api-service".
-	Source string `json:"source"`
-
-	// Timestamp is when the message was created.
-	Timestamp time.Time `json:"timestamp"`
-
-	// Data contains the actual message payload, which can be any structure.
-	Data interface{} `json:"data"`
+	Type      string      `json:"type"`      // Type identifies the nature of the event, e.g., "payment.created".  	// Consumers use this to know what the message is about.
+	Source    string      `json:"source"`    // Source identifies which service published the message, e.g., "api-service".
+	Timestamp time.Time   `json:"timestamp"` // Timestamp is when the message was created.
+	Data      interface{} `json:"data"`      // Data contains the actual message payload, which can be any structure.
 }
 
 // NewEvent creates a new EventMessage.

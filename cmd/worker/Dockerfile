@@ -7,19 +7,19 @@ WORKDIR /app
 # Copy go.mod and go.sum files
 COPY go.mod go.sum ./
 
-# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
+# Download all dependencies
 RUN go mod download
 
 # Copy the source code
 COPY . .
 
-# Build the worker service
+# Build the worker service (Note: building from cmd/worker)
 RUN CGO_ENABLED=0 GOOS=linux go build -o /worker ./cmd/worker
 
 # Use a minimal image for the final stage
 FROM alpine:latest
 
-# Install ca-certificates for HTTPS connections
+# Install ca-certificates
 RUN apk --no-cache add ca-certificates
 
 # Set the current working directory inside the container
