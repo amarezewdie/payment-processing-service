@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/amarezewdie/payment-processing-service/internal/model"
+	"github.com/amarezewdie/payment-processing-service/internal/application/service"
+	"github.com/amarezewdie/payment-processing-service/internal/domain"
 	httpResponse "github.com/amarezewdie/payment-processing-service/internal/pkg/http"
-	"github.com/amarezewdie/payment-processing-service/internal/service"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -14,11 +14,11 @@ import (
 
 // PaymentHandler handles HTTP requests related to payments.
 type PaymentHandler struct {
-	paymentService *service.PaymentService
+	paymentService service.IPaymentService
 }
 
 // NewPaymentHandler creates a new PaymentHandler.
-func NewPaymentHandler(paymentService *service.PaymentService) *PaymentHandler {
+func NewPaymentHandler(paymentService service.IPaymentService) *PaymentHandler {
 	return &PaymentHandler{paymentService: paymentService}
 }
 
@@ -82,7 +82,7 @@ func (h *PaymentHandler) GetPayment(w http.ResponseWriter, r *http.Request) {
 
 	payment, err := h.paymentService.GetPayment(r.Context(), paymentID)
 	if err != nil {
-		if err.Error() == model.ErrPaymentNotFound.Error() {
+		if err.Error() == domain.ErrPaymentNotFound.Error() {
 			httpResponse.HTTPError(w, http.StatusNotFound, "Payment not found")
 			return
 		}

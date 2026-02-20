@@ -49,7 +49,7 @@ services:
   worker:
     build:
       context: .
-      dockerfile: cmd/worker/Dockerfile
+      dockerfile: worker/Dockerfile
     container_name: worker
     depends_on:
       postgres:

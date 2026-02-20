@@ -1,6 +1,7 @@
-package model
+package domain
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -53,4 +54,17 @@ func (p *Payment) MarkAsFailed() {
 func (p *Payment) MarkAsCanceled() {
 	p.Status = PaymentStatusCanceled
 	p.UpdatedAt = time.Now()
+}
+
+// PaymentRepository defines the interface for interacting with payment data storage.
+type PaymentRepository interface {
+	Save(ctx context.Context, payment *Payment) error
+	FindByID(ctx context.Context, id uuid.UUID) (*Payment, error)
+	Update(ctx context.Context, payment *Payment) error
+	UpdateStatusIfPending(ctx context.Context, id uuid.UUID, newStatus PaymentStatus) (bool, error)
+}
+
+// PaymentNotifier defines the interface for notifying about payment events.
+type PaymentNotifier interface {
+	NotifyPaymentCreated(ctx context.Context, paymentID uuid.UUID) error
 }

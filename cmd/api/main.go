@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 
-	"github.com/amarezewdie/payment-processing-service/internal"
 	"github.com/amarezewdie/payment-processing-service/server"
 
 	"github.com/joho/godotenv"
@@ -15,7 +14,7 @@ func main() {
 	}
 
 	// 1. Initialize shared infrastructure
-	app := internal.NewApp()
+	app := server.NewApp()
 	defer app.Close()
 
 	// 2. Start API Server with injected PaymentService

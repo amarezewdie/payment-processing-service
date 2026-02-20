@@ -1,29 +1,15 @@
-package rabbitmq
+package messaging
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
-	"github.com/amarezewdie/payment-processing-service/internal/pkg/messaging"
 
+	"github.com/amarezewdie/payment-processing-service/internal/pkg/messaging"
 	"github.com/google/uuid"
 	"github.com/streadway/amqp"
 )
-
-// PaymentNotifier implements application.PaymentNotifier for RabbitMQ.
-type PaymentNotifier struct {
-	channel      *amqp.Channel
-	exchangeName string
-}
-
-// NewPaymentNotifier creates a new RabbitMQ PaymentNotifier.
-func NewPaymentNotifier(channel *amqp.Channel, exchangeName string) *PaymentNotifier {
-	return &PaymentNotifier{
-		channel:      channel,
-		exchangeName: exchangeName,
-	}
-}
 
 // NotifyPaymentCreated publishes a message to RabbitMQ when a payment is created.
 func (n *PaymentNotifier) NotifyPaymentCreated(ctx context.Context, paymentID uuid.UUID) error {
