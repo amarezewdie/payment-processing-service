@@ -1,4 +1,4 @@
-name: CI
+name: Payment Service CI
 
 on:
   push:
@@ -6,69 +6,66 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  GO_VERSION: "1.25.5"
+
 jobs:
   lint:
-    name: Lint
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: golangci-lint
+      - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
 
   test:
-    name: Test
+    needs: lint   # ⬅️ enforce order
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: ${{ env.GO_VERSION }}
           cache: true
 
       - name: Run tests
         run: go test -v ./...
 
   build:
-    name: Build
+    needs: test   # ⬅️ only build if tests pass
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.25.5'
+          go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: Build API
+      - name: Build API binary
         run: go build -o bin/api ./cmd/api
 
-      - name: Build Worker
+      - name: Build Worker binary
         run: go build -o bin/worker ./cmd/worker
 
   docker:
-    name: Docker Build
+    needs: build   # ⬅️ only build docker if compile succeeded
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Build API Image
-        run: docker build -t payment-api:latest -f cmd/api/Dockerfile .
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Build Worker Image
-        run: docker build -t payment-worker:latest -f cmd/worker/Dockerfile .
+      - name: Build API image
+        run: docker build -t payment-api:ci -f cmd/api/Dockerfile .
+
+      - name: Build Worker image
+        run: docker build -t payment-worker:ci -f cmd/worker/Dockerfile .
