@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
-	"payment/internal"
-	"payment/worker"
+	"github.com/amarezewdie/payment-processing-service/internal"
+	"github.com/amarezewdie/payment-processing-service/worker"
 
 	"github.com/joho/godotenv"
 )

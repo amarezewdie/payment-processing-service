@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"payment/internal/model"
+	"github.com/amarezewdie/payment-processing-service/internal/model"
 	"time"
 
 	"github.com/google/uuid"

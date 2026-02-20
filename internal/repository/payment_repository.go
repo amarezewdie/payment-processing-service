@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"payment/internal/model"
+	"github.com/amarezewdie/payment-processing-service/internal/model"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4/pgxpool"

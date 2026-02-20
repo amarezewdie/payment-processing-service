@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"os"
 
-	"payment/internal/service"
-	"payment/server/handler"
+	"github.com/amarezewdie/payment-processing-service/internal/service"
+	"github.com/amarezewdie/payment-processing-service/server/handler"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

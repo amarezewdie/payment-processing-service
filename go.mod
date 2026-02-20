@@ -1,4 +1,4 @@
-module payment
+module github.com/amarezewdie/payment-processing-service
 
 go 1.24.0
 

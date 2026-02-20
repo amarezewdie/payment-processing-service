@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"payment/internal/pkg/messaging"
+	"github.com/amarezewdie/payment-processing-service/internal/pkg/messaging"
 
 	"github.com/google/uuid"
 	"github.com/streadway/amqp"

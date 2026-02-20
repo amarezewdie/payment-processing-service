@@ -5,10 +5,10 @@ import (
 	"log"
 	"os"
 
-	"payment/internal/adapters/rabbitmq"
-	"payment/internal/pkg"
-	"payment/internal/repository"
-	"payment/internal/service"
+	"github.com/amarezewdie/payment-processing-service/internal/adapters/rabbitmq"
+	"github.com/amarezewdie/payment-processing-service/internal/pkg"
+	"github.com/amarezewdie/payment-processing-service/internal/repository"
+	"github.com/amarezewdie/payment-processing-service/internal/service"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 )

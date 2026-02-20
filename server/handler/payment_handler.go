@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"payment/internal/model"
-	httpResponse "payment/internal/pkg/http"
-	"payment/internal/service"
+	"github.com/amarezewdie/payment-processing-service/internal/model"
+	httpResponse "github.com/amarezewdie/payment-processing-service/internal/pkg/http"
+	"github.com/amarezewdie/payment-processing-service/internal/service"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
