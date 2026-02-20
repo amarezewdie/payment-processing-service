@@ -1,35 +1,45 @@
-# Use the official Golang image as a build base
-FROM golang:1.25.5-alpine AS builder
+# -------- Build Stage --------
+FROM golang:1.25.5-alpine3.20 AS builder
 
-# Set the current working directory inside the container
-WORKDIR /app
+# Install only what we need to build
+RUN apk add --no-cache git ca-certificates tzdata
 
-# Copy go.mod and go.sum files
+WORKDIR /build
+
+# Cache dependencies (faster CI/CD)
 COPY go.mod go.sum ./
-
-# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
 RUN go mod download
 
-# Copy the source code
+# Copy source code
 COPY . .
 
-# Build the API service
-RUN CGO_ENABLED=0 GOOS=linux go build -o /api ./cmd/api
+# Build a static, small binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -ldflags="-s -w" -o api ./cmd/api
 
-# Use a minimal image for the final stage
-FROM alpine:latest
 
-# Install ca-certificates for HTTPS connections
-RUN apk --no-cache add ca-certificates
+# -------- Runtime Stage --------
+FROM alpine:3.20
 
-# Set the current working directory inside the container
-WORKDIR /root/
+# Install runtime dependencies only
+RUN apk --no-cache add ca-certificates tzdata \
+    && addgroup -S appgroup \
+    && adduser -S appuser -G appgroup
 
-# Copy the built binary from the builder stage
-COPY --from=builder /api .
+WORKDIR /app
 
-# Expose port 8080
+# Copy binary from builder
+COPY --from=builder /build/api .
+
+# Use non-root user (important security)
+RUN chown -R appuser:appgroup /app
+USER appuser
+
+# Your API port
 EXPOSE 8080
 
-# Command to run the executable
-CMD ["./api"]
+# Healthcheck for auto-restart / monitoring
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
+  CMD wget --spider -q http://localhost:8080/health || exit 1
+
+ENTRYPOINT ["./api"]
