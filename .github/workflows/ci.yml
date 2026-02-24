@@ -1,0 +1,155 @@
+name: Payment Service CI
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ dev ]
+  release:
+    types: [published]
+
+env:
+  GO_VERSION: "1.24"
+  DOCKER_REGISTRY: ghcr.io
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  # 1. Build and Test Go Binaries
+  build:
+    name: Build Go Binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build API binary
+        run: go build -o bin/api ./cmd/api
+
+      - name: Build Worker binary
+        run: go build -o bin/worker ./cmd/worker
+
+  # 2. Build Docker Images
+  docker:
+    name: Build Docker Images
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image
+        run: docker build -t payment-api:ci -f cmd/api/Dockerfile .
+
+      - name: Build Worker image
+        run: docker build -t payment-worker:ci -f worker/Dockerfile .
+
+  # 3. Push to Registry
+  push:
+    name: Push Docker Images
+    needs: docker
+    if: |
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) ||
+      (github.event_name == 'pull_request' && github.base_ref == 'dev') ||
+      github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Docker registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Tag and push API image
+        run: |
+          docker tag payment-api:ci ${{ env.DOCKER_REGISTRY }}/amarezewdie/payment-api:${{ env.IMAGE_TAG }}
+          docker push ${{ env.DOCKER_REGISTRY }}/amarezewdie/payment-api:${{ env.IMAGE_TAG }}
+          docker tag payment-api:ci ${{ env.DOCKER_REGISTRY }}/amarezewdie/payment-api:latest
+          docker push ${{ env.DOCKER_REGISTRY }}/amarezewdie/payment-api:latest
+
+      - name: Tag and push Worker image
+        run: |
+          docker tag payment-worker:ci ${{ env.DOCKER_REGISTRY }}/amarezewdie/payment-worker:${{ env.IMAGE_TAG }}
+          docker push ${{ env.DOCKER_REGISTRY }}/amarezewdie/payment-worker:${{ env.IMAGE_TAG }}
+          docker tag payment-worker:ci ${{ env.DOCKER_REGISTRY }}/amarezewdie/payment-worker:latest
+          docker push ${{ env.DOCKER_REGISTRY }}/amarezewdie/payment-worker:latest
+
+  #  Deploy to Dev (on push or PR to dev branch
+  deploy-dev:
+    name: Deploy to Dev
+    needs: push
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
+      (github.event_name == 'pull_request' && github.base_ref == 'dev')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.DEV_VPS_SSH_KEY }}
+
+      - name: Deploy to Dev VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.DEV_VPS_USER }}@${{ secrets.DEV_VPS_HOST }} << 'EOF'
+            docker pull ${{ env.DOCKER_REGISTRY }}/amarezewdie/payment-api:${{ env.IMAGE_TAG }}
+            docker pull ${{ env.DOCKER_REGISTRY }}/amarezewdie/payment-worker:${{ env.IMAGE_TAG }}
+            cd /opt/payment/dev
+            export IMAGE_TAG=${{ env.IMAGE_TAG }}
+            docker-compose up -d
+          EOF
+
+  # 4b. Deploy to Staging (on push to main)
+  deploy-staging:
+    name: Deploy to Staging
+    needs: push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.STAGING_VPS_SSH_KEY }}
+
+      - name: Deploy to Staging VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.STAGING_VPS_USER }}@${{ secrets.STAGING_VPS_HOST }} << 'EOF'
+            docker pull ${{ env.DOCKER_REGISTRY }}/amarezewdie/payment-api:${{ env.IMAGE_TAG }}
+            docker pull ${{ env.DOCKER_REGISTRY }}/amarezewdie/payment-worker:${{ env.IMAGE_TAG }}
+            cd /opt/payment/staging
+            export IMAGE_TAG=${{ env.IMAGE_TAG }}
+            docker-compose up -d
+          EOF
+
+  # 4c. Deploy to Production (on release)
+  deploy-production:
+    name: Deploy to Production
+    needs: push
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.PROD_VPS_SSH_KEY }}
+
+      - name: Deploy to Production VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.PROD_VPS_USER }}@${{ secrets.PROD_VPS_HOST }} << 'EOF'
+            docker pull ${{ env.DOCKER_REGISTRY }}/amarezewdie/payment-api:${{ env.IMAGE_TAG }}
+            docker pull ${{ env.DOCKER_REGISTRY }}/amarezewdie/payment-worker:${{ env.IMAGE_TAG }}
+            cd /opt/payment/production
+            export IMAGE_TAG=${{ env.IMAGE_TAG }}
+            docker-compose up -d
+          EOF
